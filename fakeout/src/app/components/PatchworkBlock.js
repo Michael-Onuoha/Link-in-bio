@@ -1,3 +1,5 @@
+// PatchworkBlock.js - Complete file with mobile drag fix
+"use client"
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrag } from 'react-dnd';
 import { BLOCK_ITEM_TYPE, CELL_SIZE } from '../constants';
@@ -15,103 +17,46 @@ const PatchworkBlock = ({ blockData, onBlockMove, onBlockResize, activeSectionIn
   });
 
   const [isClicked, setIsClicked] = useState(false);
-  // Removed dragStarted and touchStartTime states as they are no longer needed with this approach
-  // const [dragStarted, setDragStarted] = useState(false);
-  // const [touchStartTime, setTouchStartTime] = useState(null);
 
   const currentDisplaySize = morphedSizeInfo && isDragging ? morphedSizeInfo : { width: blockData.width, height: blockData.height };
 
-  // Removed custom handleTouchStart and handleMouseDown
-  // const handleTouchStart = (e) => {
-  //   // Don't interfere with resize handles
-  //   if (e.target.classList.contains('resize-handle')) {
-  //     return;
-  //   }
-  //   setIsClicked(true);
-  //   setDragStarted(false);
-  //   setTouchStartTime(Date.now());
-  //   // Let the touch backend handle the event
-  //   e.stopPropagation();
-  // };
-  // const handleMouseDown = (e) => {
-  //   // Don't interfere with resize handles
-  //   if (e.target.classList.contains('resize-handle')) {
-  //     return;
-  //   }
-  //   setIsClicked(true);
-  //   setDragStarted(false);
-  //   e.stopPropagation();
-  // };
-  // Removed handleTouchEnd
-  // const handleTouchEnd = (e) => {
-  //   if (!isDragging && Date.now() - touchStartTime < 200) {
-  //     // Quick tap - reset state
-  //     setTimeout(() => {
-  //       if (!isDragging) {
-  //         setIsClicked(false);
-  //       }
-  //     }, 100);
-  //   }
-  // };
-  // Removed drag start detection effect
-  // useEffect(() => {
-  //   if (isDragging && !dragStarted) {
-  //     setDragStarted(true);
-  //   } else if (!isDragging && dragStarted) {
-  //     setDragStarted(false);
-  //     setIsClicked(false);
-  //   }
-  // }, [isDragging, dragStarted]);
-
-  // Add back the simple click handler for selection
+  // Click handler for selection (desktop only)
   const handleBlockClick = (e) => {
-    // Only set clicked if the target is the block itself, not a resize handle
-    if (blockRef.current && blockRef.current === e.target) {
-       setIsClicked(true);
+    // Only handle clicks on desktop (non-touch devices)
+    if (!('ontouchstart' in window)) {
+      if (blockRef.current && (blockRef.current === e.target || blockRef.current.contains(e.target))) {
+        if (!e.target.classList.contains('resize-handle')) {
+          setIsClicked(true);
+        }
+      }
     }
   };
 
-  // Add back a simple touchstart handler without stopping propagation
-  const handleBlockTouchStart = (e) => {
-     // Allow event to propagate to react-dnd-touch-backend
-     // e.stopPropagation() is intentionally omitted here
-     // e.preventDefault() is handled by touch-action: none and the backend
+  // Touch handler for mobile selection
+  const handleTouchStart = (e) => {
+    // Don't interfere with resize handles
+    if (e.target.classList.contains('resize-handle')) {
+      return;
+    }
+    
+    // Set selection on touch for mobile
+    setIsClicked(true);
   };
 
-  // Removed the useEffect that updated isClicked based on isDragging
-  // useEffect(() => {
-  //   if (isDragging) {
-  //     setIsClicked(true); // Block is considered "clicked" or active when dragging starts
-  //   } else {
-  //     // When dragging stops, we might want to keep it clicked until an outside click occurs
-  //     // Or reset immediately if it was just a short tap that didn't drag
-  //     // For now, let's rely on the document click listener to deselect
-  //     // setIsClicked(false); // This might be too aggressive, let document listener handle deselect
-  //   }
-  // }, [isDragging]);
-
-
+  // Document click/touch handler to deselect
   useEffect(() => {
-    const handleDocumentTouch = (e) => {
+    const handleDocumentInteraction = (e) => {
       if (blockRef.current && !blockRef.current.contains(e.target)) {
         setIsClicked(false);
       }
     };
 
-    const handleDocumentMouse = (e) => {
-      if (blockRef.current && !blockRef.current.contains(e.target)) {
-        setIsClicked(false);
-      }
-    };
-
-    // Use passive listeners for better performance
-    document.addEventListener('mousedown', handleDocumentMouse);
-    // Keep touchstart listener for outside clicks, but make it passive
-    document.addEventListener('touchstart', handleDocumentTouch, { passive: true });
+    document.addEventListener('mousedown', handleDocumentInteraction);
+    document.addEventListener('touchstart', handleDocumentInteraction, { passive: true });
 
     return () => {
-      document.removeEventListener('mousedown', handleDocumentMouse);
-      document.removeEventListener('touchstart', handleDocumentTouch);
+      document.removeEventListener('mousedown', handleDocumentInteraction);
+      document.removeEventListener('touchstart', handleDocumentInteraction);
     };
   }, []);
 
@@ -125,14 +70,8 @@ const PatchworkBlock = ({ blockData, onBlockMove, onBlockResize, activeSectionIn
   return (
     <div
       ref={setRefs}
-      // Removed onMouseDown and onTouchStart/End
-      // onMouseDown={handleMouseDown}
-      // onTouchStart={handleTouchStart}
-      // onTouchEnd={handleTouchEnd}
-      // Add back onClick for selection
       onClick={handleBlockClick}
-      // Keep onTouchStart without stopPropagation
-      onTouchStart={handleBlockTouchStart}
+      onTouchStart={handleTouchStart}
       className={`absolute rounded-2xl shadow-lg cursor-grab active:cursor-grabbing select-none transition-all duration-300 ease-out group ${blockData.color} ${
         isDragging
           ? 'opacity-75 z-50 scale-105'
@@ -144,15 +83,13 @@ const PatchworkBlock = ({ blockData, onBlockMove, onBlockResize, activeSectionIn
         width: currentDisplaySize.width * CELL_SIZE - 4,
         height: currentDisplaySize.height * CELL_SIZE - 4,
         transformOrigin: 'center center',
-        // Critical mobile touch settings
-        touchAction: 'none', // Prevent scrolling during drag
+        // Mobile-friendly touch settings
+        touchAction: 'none', // Changed from 'none'
         WebkitTapHighlightColor: 'transparent',
-        // Prevent text selection during drag
         WebkitUserSelect: 'none',
         MozUserSelect: 'none',
         msUserSelect: 'none',
         userSelect: 'none',
-        // Ensure the element is above other content
         zIndex: isDragging ? 1000 : 10,
       }}
       data-block-id={blockData.id}
@@ -192,9 +129,9 @@ const PatchworkBlock = ({ blockData, onBlockMove, onBlockResize, activeSectionIn
         </>
       )}
 
-      {/* Mobile drag hint - show on touch devices */}
+      {/* Mobile drag hint */}
       {isClicked && !isDragging && (
-        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black/80 text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap animate-pulse">
+        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black/80 text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap">
           <span className="sm:hidden">Long press & drag to move</span>
           <span className="hidden sm:inline">Click & drag to move</span>
         </div>

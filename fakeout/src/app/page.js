@@ -1,3 +1,4 @@
+// Simple App.js fix - just change your backend configuration
 "use client"
 import React from 'react';
 import { DndProvider } from 'react-dnd';
@@ -6,14 +7,13 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import PatchworkGrid from './components/PatchworkGrid';
 
-// Improved backend configuration for better mobile support
+// Simple mobile-friendly backend config
 const HTML5toTouch = {
   backends: [
     {
       id: 'html5',
       backend: HTML5Backend,
       transition: {
-        // Use HTML5 backend for mouse events only
         type: 'mousedown',
       },
     },
@@ -21,23 +21,12 @@ const HTML5toTouch = {
       id: 'touch',
       backend: TouchBackend,
       options: {
-        enableMouseEvents: false, // Disable to avoid conflicts
+        enableMouseEvents: false,
         enableTouchEvents: true,
-        // Reduce delay for better responsiveness
-        delayTouchStart: 50,
-        // Increase delay for long press to differentiate from quick taps
-        delayLongPress: 200,
-        // Increase touch slop for better drag detection
-        touchSlop: 25, // <-- Increased from 16 to 25
-        // Ignore context menu
+        delayTouchStart: 300,    // Increase this if drag doesn't start
+        delayLongPress: 500,     // Increase this if long press doesn't work
+        touchSlop: 8,            // Decrease this if drag is hard to start
         ignoreContextMenu: true,
-        // Enable HTML5 drag image for better visual feedback
-        enableHtmlDragAndDrop: false,
-        // Scroll threshold
-        scrollAngleRanges: [
-          { start: 30, end: 150 },
-          { start: 210, end: 330 }
-        ],
       },
       preview: true,
       transition: {

@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "react-dnd-multi-backend": "^9.0.0",
+    "react-dnd-touch-backend": "^16.0.1"
+  }
+}

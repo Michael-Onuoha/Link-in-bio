@@ -1,4 +1,4 @@
-// PatchworkBlock.js - Complete file with mobile drag fix
+// PatchworkBlock.js - Complete with mobile drag support
 "use client"
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrag } from 'react-dnd';
@@ -11,39 +11,32 @@ const PatchworkBlock = ({ blockData, onBlockMove, onBlockResize, activeSectionIn
   const [{ isDragging }, drag, preview] = useDrag({
     type: BLOCK_ITEM_TYPE,
     item: { id: blockData.id, originalPosition: { x: blockData.x, y: blockData.y } },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
+    collect: (monitor) => {
+      // Debug logging - remove this after testing
+      console.log('Block', blockData.id, 'drag status:', monitor.isDragging());
+      return {
+        isDragging: monitor.isDragging(),
+      };
+    },
+    options: {
+      dropEffect: 'move',
+    },
   });
 
   const [isClicked, setIsClicked] = useState(false);
 
   const currentDisplaySize = morphedSizeInfo && isDragging ? morphedSizeInfo : { width: blockData.width, height: blockData.height };
 
-  // Click handler for selection (desktop only)
-  const handleBlockClick = (e) => {
-    // Only handle clicks on desktop (non-touch devices)
-    if (!('ontouchstart' in window)) {
-      if (blockRef.current && (blockRef.current === e.target || blockRef.current.contains(e.target))) {
-        if (!e.target.classList.contains('resize-handle')) {
-          setIsClicked(true);
-        }
+  // Simplified click handler for selection
+  const handleClick = (e) => {
+    if (blockRef.current && (blockRef.current === e.target || blockRef.current.contains(e.target))) {
+      if (!e.target.classList.contains('resize-handle')) {
+        setIsClicked(true);
       }
     }
   };
 
-  // Touch handler for mobile selection
-  const handleTouchStart = (e) => {
-    // Don't interfere with resize handles
-    if (e.target.classList.contains('resize-handle')) {
-      return;
-    }
-    
-    // Set selection on touch for mobile
-    setIsClicked(true);
-  };
-
-  // Document click/touch handler to deselect
+  // Document interaction handler to deselect
   useEffect(() => {
     const handleDocumentInteraction = (e) => {
       if (blockRef.current && !blockRef.current.contains(e.target)) {
@@ -70,8 +63,7 @@ const PatchworkBlock = ({ blockData, onBlockMove, onBlockResize, activeSectionIn
   return (
     <div
       ref={setRefs}
-      onClick={handleBlockClick}
-      onTouchStart={handleTouchStart}
+      onClick={handleClick}
       className={`absolute rounded-2xl shadow-lg cursor-grab active:cursor-grabbing select-none transition-all duration-300 ease-out group ${blockData.color} ${
         isDragging
           ? 'opacity-75 z-50 scale-105'
@@ -83,13 +75,20 @@ const PatchworkBlock = ({ blockData, onBlockMove, onBlockResize, activeSectionIn
         width: currentDisplaySize.width * CELL_SIZE - 4,
         height: currentDisplaySize.height * CELL_SIZE - 4,
         transformOrigin: 'center center',
-        // Mobile-friendly touch settings
-        touchAction: 'none', // Changed from 'none'
+        // Mobile-optimized touch settings
+        touchAction: 'none', // Critical for mobile dragging
         WebkitTapHighlightColor: 'transparent',
+        WebkitTouchCallout: 'none', // Prevent iOS context menu
+        WebkitUserDrag: 'none', // Prevent native HTML5 drag
         WebkitUserSelect: 'none',
+        KhtmlUserSelect: 'none',
         MozUserSelect: 'none',
         msUserSelect: 'none',
         userSelect: 'none',
+        // Prevent scrolling during drag
+        overscrollBehavior: 'none',
+        // Additional mobile-specific styles
+        WebkitOverflowScrolling: 'touch',
         zIndex: isDragging ? 1000 : 10,
       }}
       data-block-id={blockData.id}
@@ -140,6 +139,13 @@ const PatchworkBlock = ({ blockData, onBlockMove, onBlockResize, activeSectionIn
       {/* Visual feedback for touch interaction */}
       {isClicked && (
         <div className="absolute inset-0 bg-white bg-opacity-10 rounded-2xl pointer-events-none animate-pulse"></div>
+      )}
+
+      {/* Debug indicator - remove after testing */}
+      {isDragging && (
+        <div className="absolute -top-6 left-0 bg-green-500 text-white text-xs px-2 py-1 rounded pointer-events-none">
+          DRAGGING
+        </div>
       )}
     </div>
   );
